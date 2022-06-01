@@ -125,12 +125,12 @@ export abstract class ClassTestUI {
         if (isAsync(prototype.before)) {
           theTestUI.runner.beforeEach("before", wrap(function(done: Function) {
             instance[theTestUI.context] = this;
-            return prototype.before.call(instance, done);
+            return instance.before(done);
           }, prototype.before), theTestUI.getSettings(prototype.before));
         } else {
           theTestUI.runner.beforeEach("before", wrap(function() {
             instance[theTestUI.context] = this;
-            return prototype.before.call(instance);
+            return instance.before();
           }, prototype.before), theTestUI.getSettings(prototype.before));
         }
       }
@@ -143,7 +143,7 @@ export abstract class ClassTestUI {
 
       // All suite before/after each/all calls and instantiation have been set in place.
       // Now collect all potential test methods and declare them in the underlying test framework.
-      const collectedTests: { [key: string]: any[] } = {};
+      const collectedTests: { [key: string]: any } = {};
       let currentPrototype = prototype;
       while (currentPrototype !== Object.prototype) {
         Object.getOwnPropertyNames(currentPrototype).forEach((key) => {
@@ -151,13 +151,13 @@ export abstract class ClassTestUI {
           if (typeof descriptor.value === 'function'
               && descriptor.value[ClassTestUI.nameSymbol]
               && !collectedTests[key]) {
-            collectedTests[key] = [prototype, descriptor.value];
+            collectedTests[key] = descriptor.value;
           }
         });
         currentPrototype = (Object as any).getPrototypeOf(currentPrototype);
       }
 
-      function declareTestMethod(prototype: any, method: Function) {
+      function declareTestMethod(method: Function) {
         const testName = method[ClassTestUI.nameSymbol];
         const parameters = method[ClassTestUI.parametersSymbol] as TestParams[];
         if (parameters) {
@@ -186,21 +186,18 @@ export abstract class ClassTestUI {
         if (isAsync(method)) {
           theTestUI.runner.test(testName, wrap(function(done) {
             instance[theTestUI.context] = this;
-            return method.call(instance, done, ...callArgs);
+            return instance[method.name](done, ...callArgs);
           }, method), testSettings);
         } else {
           theTestUI.runner.test(testName, wrap(function() {
             instance[theTestUI.context] = this;
-            return method.call(instance, ...callArgs);
+            return instance[method.name](...callArgs);
           }, method), testSettings);
         }
       }
 
       // run all collected tests
-      for (const key in collectedTests) {
-        const value = collectedTests[key];
-        declareTestMethod(value[0], value[1]);
-      }
+      Object.values(collectedTests).forEach(test => declareTestMethod(test))
 
       // Register a final after-each method to clear the instance reference.
       function registerTeardownHook() {

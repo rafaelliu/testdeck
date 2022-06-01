@@ -869,6 +869,7 @@ describe("testdeck", function() {
                     z = this;
                 }
                 @ui.test public test() {
+                    console.log('executed')
                     assert.equal(this as ZClass, z);
                 }
             }
