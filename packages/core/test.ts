@@ -851,14 +851,16 @@ describe("testdeck", function() {
             let z;
 
             @ui.suite class XClass {
+                injectedProperty: string;
                 @ui.test public test() {
                     assert.equal(this as XClass, x);
+                    assert.equal(this.injectedProperty, 'injected value');
                 }
             }
 
             @ui.suite class YClass {
                 @ui.test public test() {
-                    assert.equal(this as YClass, y);
+                    assert(false);
                 }
             }
 
@@ -879,6 +881,7 @@ describe("testdeck", function() {
                     return cls.name.startsWith("X");
                 },
                 create<T>(cls: TestClass<T>): T {
+                    x.injectedProperty = 'injected value';
                     return x;
                 }
             });
@@ -887,6 +890,9 @@ describe("testdeck", function() {
                     return cls.name.startsWith("Y");
                 },
                 create<T>(cls: TestClass<T>): T {
+                    y.test = function() {
+                        assert.equal(this as YClass, y);
+                    }
                     return y;
                 }
             });
